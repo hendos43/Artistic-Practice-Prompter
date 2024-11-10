@@ -23,19 +23,23 @@ def initiate_google_auth():
         }
     }
     flow = Flow.from_client_config(client_config, scopes=SCOPES)
-    flow.redirect_uri = "https://artistic-practice-prompter.streamlit.app/"  
+    flow.redirect_uri = "https://artistic-practice-prompter.streamlit.app/" 
     auth_url, _ = flow.authorization_url(prompt='consent')
     return auth_url, flow
 
-# Step 2: Display Google OAuth link
+# Step 2: Display Google OAuth link and store Flow in session
 if "credentials" not in st.session_state:
-    auth_url, flow = initiate_google_auth()
-    st.write(f"[Click here to authenticate with Google]({auth_url})")
+    if "flow" not in st.session_state:
+        auth_url, flow = initiate_google_auth()
+        st.session_state["flow"] = flow  # Store the Flow object in session state
+        st.write(f"[Click here to authenticate with Google]({auth_url})")
 
     # Retrieve authorization response URL
     authorization_response = st.text_input("Paste the authorization response URL here:")
     if st.button("Submit Authorization URL"):
         try:
+            # Fetch the Flow object from session state
+            flow = st.session_state["flow"]
             flow.fetch_token(authorization_response=authorization_response)
             st.session_state["credentials"] = flow.credentials.to_json()
             st.success("Successfully authenticated with Google!")
