@@ -23,31 +23,25 @@ def initiate_google_auth():
         }
     }
     flow = Flow.from_client_config(client_config, scopes=SCOPES)
-    flow.redirect_uri = "https://artistic-practice-prompter.streamlit.app/"  # Your actual Streamlit app URL
+    flow.redirect_uri = "https://artistic-practice-prompter.streamlit.app/"  # Replace with your actual Streamlit app URL
     auth_url, _ = flow.authorization_url(prompt='consent')
     st.session_state["flow"] = flow  # Store Flow object in session
     return auth_url
 
-# Step 2: Display Google OAuth link and check authorization response
+# Step 2: Display Google OAuth link and handle copy-paste of authorization response
 if "credentials" not in st.session_state:
     if "auth_url" not in st.session_state:
         st.session_state["auth_url"] = initiate_google_auth()
 
-    # JavaScript code to open the OAuth link in the same tab
-    js_code = f"""
-    <script>
-        function openAuth() {{
-            window.location.href = "{st.session_state['auth_url']}";
-        }}
-    </script>
-    <button onclick="openAuth()">Authenticate with Google</button>
-    """
-    st.markdown(js_code, unsafe_allow_html=True)
+    # Display the OAuth URL and prompt the user to copy the URL after authenticating
+    st.write("Click the link below to authenticate with Google:")
+    st.write(f"[Authenticate with Google]({st.session_state['auth_url']})")
+    st.write("After authenticating, copy the URL from the address bar of the new tab and paste it below.")
 
-    # Check for authorization response
-    query_params = st.query_params
-    if "code" in query_params:
-        authorization_response = f"https://artistic-practice-prompter.streamlit.app/?code={query_params['code'][0]}"
+    # Input for the user to paste the redirected URL
+    authorization_response = st.text_input("Paste the full authorization response URL here:")
+
+    if st.button("Submit Authorization URL"):
         try:
             # Fetch the Flow object from session state and complete the token exchange
             flow = st.session_state["flow"]
