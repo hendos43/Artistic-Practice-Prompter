@@ -4,7 +4,6 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from datetime import datetime
-import json
 
 # Configuration for OAuth scopes
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
@@ -24,34 +23,31 @@ def initiate_google_auth():
         }
     }
     flow = Flow.from_client_config(client_config, scopes=SCOPES)
-    flow.redirect_uri = "https://artistic-practice-prompter.streamlit.app/"
-    auth_url, state = flow.authorization_url(prompt='consent')
-    st.session_state["flow"] = flow  # Store Flow object
-    st.session_state["state"] = state  # Store state explicitly in session
+    flow.redirect_uri = "https://artistic-practice-prompter.streamlit.app/"  # Replace with your actual Streamlit app URL
+    auth_url, _ = flow.authorization_url(prompt='consent')
+    st.session_state["flow"] = flow  # Store Flow object in session
     return auth_url
 
-# Step 2: Display OAuth link within the same tab
+# Step 2: Display Google OAuth link and check authorization response
 if "credentials" not in st.session_state:
-    if st.button("Authenticate with Google"):
-        auth_url = initiate_google_auth()
-        st.write(f"[Click here to authenticate with Google]({auth_url})")
+    if "auth_url" not in st.session_state:
+        st.session_state["auth_url"] = initiate_google_auth()
     
-    # Check for the authorization response directly in the same tab
-    query_params = st.experimental_get_query_params()  # or st.query_params if updated
-    if "code" in query_params and "state" in query_params:
-        # Validate that the returned state matches the original state stored in session
-        if query_params["state"][0] == st.session_state.get("state"):
-            authorization_response = f"https://artistic-practice-prompter.streamlit.app/?code={query_params['code'][0]}&state={query_params['state'][0]}"
-            try:
-                # Fetch the Flow object from session state and complete the token exchange
-                flow = st.session_state["flow"]
-                flow.fetch_token(authorization_response=authorization_response)
-                st.session_state["credentials"] = json.loads(flow.credentials.to_json())
-                st.success("Successfully authenticated with Google!")
-            except Exception as e:
-                st.error(f"Authentication failed: {e}")
-        else:
-            st.error("Authentication failed: mismatching state. Please try again.")
+    st.write("Click the link below to authenticate. You’ll be redirected back to this app automatically in the same tab.")
+    st.write(f"[Authenticate with Google]({st.session_state['auth_url']})")
+
+    # Check for authorization response
+    query_params = st.query_params
+    if "code" in query_params:
+        authorization_response = f"https://artistic-practice-prompter.streamlit.app/?code={query_params['code'][0]}"
+        try:
+            # Fetch the Flow object from session state and complete the token exchange
+            flow = st.session_state["flow"]
+            flow.fetch_token(authorization_response=authorization_response)
+            st.session_state["credentials"] = flow.credentials.to_json()
+            st.success("Successfully authenticated with Google!")
+        except Exception as e:
+            st.error(f"Authentication failed: {e}")
 
 # Step 3: Display daily prompt and save response if authenticated
 if "credentials" in st.session_state:
@@ -63,7 +59,7 @@ if "credentials" in st.session_state:
 
     # Step 4: Save response to Google Drive
     def save_response_to_drive(prompt_text, response_text):
-        creds = json.loads(st.session_state["credentials"])  # Reconstruct credentials from session
+        creds = flow.credentials.from_authorized_user_info(st.session_state["credentials"])
         drive_service = build("drive", "v3", credentials=creds)
 
         # Create a file and upload it to Google Drive
