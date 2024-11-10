@@ -23,31 +23,36 @@ def initiate_google_auth():
         }
     }
     flow = Flow.from_client_config(client_config, scopes=SCOPES)
-    flow.redirect_uri = "https://artistic-practice-prompter.streamlit.app/" 
-    auth_url, _ = flow.authorization_url(prompt='consent')
-    return auth_url, flow
+    flow.redirect_uri = "https://artistic-practice-prompter.streamlit.app/"  # Your actual Streamlit app URL
+    auth_url, state = flow.authorization_url(prompt='consent')
+    st.session_state["flow"] = flow  # Store Flow object
+    st.session_state["state"] = state  # Store state explicitly in session
+    return auth_url
 
-# Step 2: Display Google OAuth link and store Flow in session
+# Step 2: Display Google OAuth link and check authorization response
 if "credentials" not in st.session_state:
-    if "flow" not in st.session_state:
-        auth_url, flow = initiate_google_auth()
-        st.session_state["flow"] = flow  # Store the Flow object in session state
-        st.write("Click the link below to authenticate. You’ll be redirected back to this app automatically.")
-        st.write(f"[Authenticate with Google]({auth_url})")
+    if "auth_url" not in st.session_state:
+        st.session_state["auth_url"] = initiate_google_auth()
+    
+    st.write("Click the link below to authenticate. You’ll be redirected back to this app automatically.")
+    st.write(f"[Authenticate with Google]({st.session_state['auth_url']})")
 
-    # Check for an authorization code in the query parameters
+    # Check for authorization response
     query_params = st.query_params
-    if "code" in query_params:
-        # Construct the full authorization response URL with the base URL and code query parameter
-        authorization_response = f"https://artistic-practice-prompter.streamlit.app/?code={query_params['code'][0]}"
-        try:
-            # Fetch the Flow object from session state and complete the token exchange
-            flow = st.session_state["flow"]
-            flow.fetch_token(authorization_response=authorization_response)
-            st.session_state["credentials"] = flow.credentials.to_json()
-            st.success("Successfully authenticated with Google!")
-        except Exception as e:
-            st.error(f"Authentication failed: {e}")
+    if "code" in query_params and "state" in query_params:
+        # Validate that the returned state matches the original state stored in session
+        if query_params["state"][0] == st.session_state.get("state"):
+            authorization_response = f"https://artistic-practice-prompter.streamlit.app/?code={query_params['code'][0]}&state={query_params['state'][0]}"
+            try:
+                # Fetch the Flow object from session state and complete the token exchange
+                flow = st.session_state["flow"]
+                flow.fetch_token(authorization_response=authorization_response)
+                st.session_state["credentials"] = flow.credentials.to_json()
+                st.success("Successfully authenticated with Google!")
+            except Exception as e:
+                st.error(f"Authentication failed: {e}")
+        else:
+            st.error("Authentication failed: mismatching state. Please try again.")
 
 # Step 3: Display daily prompt and save response if authenticated
 if "credentials" in st.session_state:
