@@ -20,29 +20,29 @@ SCOPE = st.secrets["SCOPE"]
 # Initialize OAuth2 component
 oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL, REFRESH_TOKEN_URL, REVOKE_TOKEN_URL)
 
-# Function to get daily prompt (example data for demonstration)
-def get_daily_prompt():
-    return "What inspired you today?"
+# Check query parameters to detect an authenticated state
+query_params = st.experimental_get_query_params()
+is_authenticated = query_params.get("auth", ["false"])[0] == "true"
 
-# Initialize Streamlit app
-st.title("Daily Prompt Response")
-st.write("Authenticate with Google to respond to today’s prompt and save it to your Google Drive.")
-
-# Check if token exists in session state
-if 'token' not in st.session_state:
-    # Show authorize button and check for result without rerun
+if 'token' not in st.session_state and not is_authenticated:
+    # If no token in session state, show authorize button
     result = oauth2.authorize_button("Authorize with Google", REDIRECT_URI, SCOPE)
     if result and 'token' in result:
-        # Save the token in session state if authorization is successful
+        # Save token in session state and set query param to indicate authenticated state
         st.session_state['token'] = result['token']
-        st.info("Authorization successful. Please reload the page if needed to proceed.")
-else:
-    # Retrieve the token from session state
-    token = st.session_state['token']
-    prompt = get_daily_prompt()
+        st.experimental_set_query_params(auth="true")
+        st.success("Authorization successful. You may now proceed.")
+elif 'token' in st.session_state or is_authenticated:
+    # Either we have the token in session or auth is confirmed via query params
+    token = st.session_state.get('token')
+    
+    # Initialize Streamlit app components
+    st.title("Daily Prompt Response")
+    prompt = "What inspired you today?"
     st.write("## Today's Prompt")
     st.write(prompt)
 
+    # Text area for user response and file uploader
     response = st.text_area("Your Response")
     uploaded_files = st.file_uploader("Upload additional files (images, videos, etc.)", accept_multiple_files=True)
 
