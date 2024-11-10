@@ -22,29 +22,27 @@ oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL, REF
 
 # Function to get daily prompt (example data for demonstration)
 def get_daily_prompt():
-    # Placeholder prompt for demonstration purposes
     return "What inspired you today?"
 
 # Initialize Streamlit app
 st.title("Daily Prompt Response")
 st.write("Authenticate with Google to respond to today’s prompt and save it to your Google Drive.")
 
-# Step 1: Start OAuth authorization flow if token does not exist in session state
+# Check if token exists in session state
 if 'token' not in st.session_state:
-    # Show authorize button
+    # Show authorize button and check for result without rerun
     result = oauth2.authorize_button("Authorize with Google", REDIRECT_URI, SCOPE)
     if result and 'token' in result:
         # Save the token in session state if authorization is successful
         st.session_state['token'] = result['token']
-        st.experimental_rerun()
+        st.info("Authorization successful. Please reload the page if needed to proceed.")
 else:
-    # Step 2: User is authenticated, display daily prompt and options
+    # Retrieve the token from session state
     token = st.session_state['token']
     prompt = get_daily_prompt()
     st.write("## Today's Prompt")
     st.write(prompt)
 
-    # Text area for user response and file uploader
     response = st.text_area("Your Response")
     uploaded_files = st.file_uploader("Upload additional files (images, videos, etc.)", accept_multiple_files=True)
 
@@ -70,12 +68,9 @@ else:
     def save_response_to_drive(prompt_text, response_text, uploaded_files):
         creds = Credentials(token=token['access_token'])
         drive_service = build("drive", "v3", credentials=creds)
-
-        # Folder structure in Google Drive
         main_folder = "Artistic Practice Prompter"
         date_folder = datetime.now().strftime("%Y-%m-%d")
 
-        # Create necessary folders
         main_folder_id = create_folder_if_not_exists(drive_service, main_folder)
         date_folder_id = create_folder_if_not_exists(drive_service, date_folder, main_folder_id)
 
@@ -113,4 +108,3 @@ else:
     if st.button("Refresh Token"):
         refreshed_token = oauth2.refresh_token(token)
         st.session_state['token'] = refreshed_token
-        st.experimental_rerun()
