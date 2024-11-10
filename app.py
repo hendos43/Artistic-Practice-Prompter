@@ -1,14 +1,25 @@
 import streamlit as st
+import json
+from datetime import datetime
 import os
 from google_auth_oauthlib.flow import Flow
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from google.oauth2.credentials import Credentials
-from datetime import datetime
-import json
 
 # Configuration for OAuth scopes
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
+
+# Load the prompts from JSON file
+with open('/mnt/data/prompts.json', 'r') as file:
+    data = json.load(file)
+    questions = data["questions"]
+
+# Function to get the daily prompt based on the day of the year
+def get_daily_prompt():
+    day_of_year = datetime.now().timetuple().tm_yday
+    prompt_index = (day_of_year - 1) % len(questions)  # -1 to make it 0-indexed
+    return questions[prompt_index]["question"]
 
 # Initialize Streamlit app
 st.title("Daily Prompt Response")
@@ -55,10 +66,12 @@ if "credentials" not in st.session_state:
 
 # Step 3: Display daily prompt and save response if authenticated
 if "credentials" in st.session_state:
+    # Display the daily prompt
+    prompt = get_daily_prompt()
     st.write("## Today's Prompt")
-    prompt = "What would you create if you forgot all your fears?"  # Example prompt
     st.write(prompt)
 
+    # User response area
     response = st.text_area("Your Response")
 
     # Step 4: Save response to Google Drive
@@ -80,5 +93,6 @@ if "credentials" in st.session_state:
         os.remove("response.txt")
         st.success("Response saved to your Google Drive!")
 
+    # Button to save the response to Google Drive
     if st.button("Save Response to Google Drive"):
         save_response_to_drive(prompt, response)
