@@ -3,6 +3,7 @@ import os
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from google.oauth2.credentials import Credentials
 from datetime import datetime
 
 # Configuration for OAuth scopes
@@ -61,7 +62,8 @@ if "credentials" in st.session_state:
 
     # Step 4: Save response to Google Drive
     def save_response_to_drive(prompt_text, response_text):
-        creds = flow.credentials.from_authorized_user_info(st.session_state["credentials"])
+        # Load credentials from session state
+        creds = Credentials.from_authorized_user_info(st.session_state["credentials"])
         drive_service = build("drive", "v3", credentials=creds)
 
         # Create a file and upload it to Google Drive
