@@ -23,7 +23,7 @@ def initiate_google_auth():
         }
     }
     flow = Flow.from_client_config(client_config, scopes=SCOPES)
-    flow.redirect_uri = "https://artistic-practice-prompter.streamlit.app/"  # Replace with your actual Streamlit app URL
+    flow.redirect_uri = "https://artistic-practice-prompter.streamlit.app/"  # Your actual Streamlit app URL
     auth_url, _ = flow.authorization_url(prompt='consent')
     st.session_state["flow"] = flow  # Store Flow object in session
     return auth_url
@@ -32,9 +32,17 @@ def initiate_google_auth():
 if "credentials" not in st.session_state:
     if "auth_url" not in st.session_state:
         st.session_state["auth_url"] = initiate_google_auth()
-    
-    st.write("Click the link below to authenticate. You’ll be redirected back to this app automatically in the same tab.")
-    st.write(f"[Authenticate with Google]({st.session_state['auth_url']})")
+
+    # JavaScript code to open the OAuth link in the same tab
+    js_code = f"""
+    <script>
+        function openAuth() {{
+            window.location.href = "{st.session_state['auth_url']}";
+        }}
+    </script>
+    <button onclick="openAuth()">Authenticate with Google</button>
+    """
+    st.markdown(js_code, unsafe_allow_html=True)
 
     # Check for authorization response
     query_params = st.query_params
