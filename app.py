@@ -6,6 +6,7 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+import tempfile
 
 # Configuration for OAuth scopes
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
@@ -109,26 +110,29 @@ if "credentials" in st.session_state:
         date_folder_id = create_folder_if_not_exists(drive_service, date_folder, main_folder_id)
 
         # Save response text as a file
-        file_metadata = {
-            'name': 'response.txt',
-            'parents': [date_folder_id],
-            'mimeType': 'text/plain'
-        }
-        with open("response.txt", "w") as file:
-            file.write(f"Prompt: {prompt_text}\nResponse: {response_text}")
-        media = MediaFileUpload("response.txt", mimetype='text/plain')
-        drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        os.remove("response.txt")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as temp_file:
+            temp_file.write(f"Prompt: {prompt_text}\nResponse: {response_text}".encode())
+            temp_file.flush()
+            file_metadata = {
+                'name': 'response.txt',
+                'parents': [date_folder_id],
+                'mimeType': 'text/plain'
+            }
+            media = MediaFileUpload(temp_file.name, mimetype='text/plain')
+            drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
 
         # Save each uploaded file to the date folder
         for uploaded_file in uploaded_files:
-            file_metadata = {
-                'name': uploaded_file.name,
-                'parents': [date_folder_id]
-            }
-            media = MediaFileUpload(uploaded_file.name, mimetype=uploaded_file.type)
-            drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{uploaded_file.name}") as temp_file:
+                temp_file.write(uploaded_file.read())
+                temp_file.flush()
+                file_metadata = {
+                    'name': uploaded_file.name,
+                    'parents': [date_folder_id]
+                }
+                media = MediaFileUpload(temp_file.name, mimetype=uploaded_file.type)
+                drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            
         st.success("Response and files saved to your Google Drive!")
 
     # Button to save the response and uploaded files to Google Drive
