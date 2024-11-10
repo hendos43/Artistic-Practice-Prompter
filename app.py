@@ -5,6 +5,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from google.oauth2.credentials import Credentials
 from datetime import datetime
+import json
 
 # Configuration for OAuth scopes
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
@@ -62,8 +63,9 @@ if "credentials" in st.session_state:
 
     # Step 4: Save response to Google Drive
     def save_response_to_drive(prompt_text, response_text):
-        # Load credentials from session state
-        creds = Credentials.from_authorized_user_info(st.session_state["credentials"])
+        # Parse credentials from JSON string stored in session state
+        creds_info = json.loads(st.session_state["credentials"])
+        creds = Credentials.from_authorized_user_info(creds_info)
         drive_service = build("drive", "v3", credentials=creds)
 
         # Create a file and upload it to Google Drive
