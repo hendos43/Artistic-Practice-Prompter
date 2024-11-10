@@ -1,47 +1,46 @@
 import streamlit as st
-import json
-from datetime import datetime
+from streamlit_oauth import OAuth2Component
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from datetime import datetime
 import tempfile
-from streamlit_oauth import OAuth
+import json
 
-# OAuth setup
-client_id = st.secrets["GCP_CLIENT_ID"]
-client_secret = st.secrets["GCP_CLIENT_SECRET"]
-redirect_uri = "https://artistic-practice-prompter.streamlit.app/"
+# Set up OAuth2Component using Streamlit Secrets Manager
+AUTHORIZE_URL = st.secrets["AUTHORIZE_URL"]
+TOKEN_URL = st.secrets["TOKEN_URL"]
+REFRESH_TOKEN_URL = st.secrets["REFRESH_TOKEN_URL"]
+REVOKE_TOKEN_URL = st.secrets["REVOKE_TOKEN_URL"]
+CLIENT_ID = st.secrets["CLIENT_ID"]
+CLIENT_SECRET = st.secrets["CLIENT_SECRET"]
+REDIRECT_URI = st.secrets["REDIRECT_URI"]
+SCOPE = st.secrets["SCOPE"]
 
-# Initialize OAuth for Google
-oauth = OAuth(client_id, client_secret, redirect_uri)
-oauth.authorize("https://www.googleapis.com/auth/drive.file")  # Request Google Drive permissions
+# Initialize OAuth2 component
+oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL, REFRESH_TOKEN_URL, REVOKE_TOKEN_URL)
 
-# Function to load prompts from JSON file
-def load_prompts():
-    with open('prompts.json', 'r') as file:
-        data = json.load(file)
-    return data["questions"]
-
-# Function to get daily prompt based on the day of the year
-def get_daily_prompt(questions):
-    day_of_year = datetime.now().timetuple().tm_yday
-    prompt_index = (day_of_year - 1) % len(questions)
-    return questions[prompt_index]["question"]
+# Function to get daily prompt (example data for demonstration)
+def get_daily_prompt():
+    # Placeholder prompt for demonstration purposes
+    return "What inspired you today?"
 
 # Initialize Streamlit app
 st.title("Daily Prompt Response")
 st.write("Authenticate with Google to respond to today’s prompt and save it to your Google Drive.")
 
-# Step 1: Authenticate and obtain Google credentials
-credentials = oauth.get_credentials()
-
-if credentials:
-    # Store credentials in session for reuse
-    st.session_state["credentials"] = credentials.to_json()
-
-    # Load prompts and display daily prompt
-    questions = load_prompts()
-    prompt = get_daily_prompt(questions)
+# Step 1: Start OAuth authorization flow if token does not exist in session state
+if 'token' not in st.session_state:
+    # Show authorize button
+    result = oauth2.authorize_button("Authorize with Google", REDIRECT_URI, SCOPE)
+    if result and 'token' in result:
+        # Save the token in session state if authorization is successful
+        st.session_state['token'] = result['token']
+        st.experimental_rerun()
+else:
+    # Step 2: User is authenticated, display daily prompt and options
+    token = st.session_state['token']
+    prompt = get_daily_prompt()
     st.write("## Today's Prompt")
     st.write(prompt)
 
@@ -49,7 +48,7 @@ if credentials:
     response = st.text_area("Your Response")
     uploaded_files = st.file_uploader("Upload additional files (images, videos, etc.)", accept_multiple_files=True)
 
-    # Function to create folders if they don’t exist in Google Drive
+    # Function to create folders in Google Drive if they don’t exist
     def create_folder_if_not_exists(drive_service, folder_name, parent_id=None):
         query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder'"
         if parent_id:
@@ -67,18 +66,20 @@ if credentials:
             folder = drive_service.files().create(body=file_metadata, fields='id').execute()
             return folder['id']
 
-    # Save response and files to Google Drive
+    # Function to save response and uploaded files to Google Drive
     def save_response_to_drive(prompt_text, response_text, uploaded_files):
-        creds = Credentials.from_authorized_user_info(json.loads(st.session_state["credentials"]))
+        creds = Credentials(token=token['access_token'])
         drive_service = build("drive", "v3", credentials=creds)
+
+        # Folder structure in Google Drive
         main_folder = "Artistic Practice Prompter"
         date_folder = datetime.now().strftime("%Y-%m-%d")
 
-        # Create folder structure
+        # Create necessary folders
         main_folder_id = create_folder_if_not_exists(drive_service, main_folder)
         date_folder_id = create_folder_if_not_exists(drive_service, date_folder, main_folder_id)
 
-        # Save response text as a file in Drive
+        # Save the response text as a file in Google Drive
         with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as temp_file:
             temp_file.write(f"Prompt: {prompt_text}\nResponse: {response_text}".encode())
             temp_file.flush()
@@ -107,8 +108,9 @@ if credentials:
     # Button to save the response and uploaded files to Google Drive
     if st.button("Save Response and Files to Google Drive"):
         save_response_to_drive(prompt, response, uploaded_files)
-else:
-    # Display login button if not authenticated
-    st.write("Click below to log in with Google:")
-    if st.button("Login with Google"):
-        oauth.redirect_authorize()
+
+    # Optionally, allow users to refresh the token
+    if st.button("Refresh Token"):
+        refreshed_token = oauth2.refresh_token(token)
+        st.session_state['token'] = refreshed_token
+        st.experimental_rerun()
