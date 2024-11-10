@@ -38,8 +38,8 @@ if "credentials" not in st.session_state:
     # Check for an authorization code in the query parameters
     query_params = st.experimental_get_query_params()
     if "code" in query_params:
-        # Construct the full authorization response URL with the query parameters
-        authorization_response = f"{st.request.url}?code={query_params['code'][0]}"
+        # Construct the full authorization response URL with the base URL and code query parameter
+        authorization_response = f"https://artistic-practice-prompter.streamlit.app/?code={query_params['code'][0]}"
         try:
             # Fetch the Flow object from session state and complete the token exchange
             flow = st.session_state["flow"]
