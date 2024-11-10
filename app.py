@@ -1,4 +1,14 @@
-import streamlit as st
+import os
+from google_auth_oauthlib.flow import Flow
 
-st.title("Daily Prompt Response")
-st.write("Once Google OAuth is set up, you’ll be able to log in with Google and save responses to your Google Drive.")
+# Initialize OAuth flow using environment variables
+client_config = {
+    "web": {
+        "client_id": os.getenv("GCP_CLIENT_ID"),
+        "client_secret": os.getenv("GCP_CLIENT_SECRET"),
+        "auth_uri": os.getenv("GCP_AUTH_URI"),
+        "token_uri": os.getenv("GCP_TOKEN_URI")
+    }
+}
+
+flow = Flow.from_client_config(client_config, scopes=['https://www.googleapis.com/auth/drive.file'])
