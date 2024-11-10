@@ -11,7 +11,7 @@ from googleapiclient.http import MediaFileUpload
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
 # Load the prompts from JSON file
-with open('/mnt/data/prompts.json', 'r') as file:
+with open('prompts.json', 'r') as file:
     data = json.load(file)
     questions = data["questions"]
 
