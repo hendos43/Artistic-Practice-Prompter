@@ -21,8 +21,7 @@ SCOPE = st.secrets["SCOPE"]
 oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL, REFRESH_TOKEN_URL, REVOKE_TOKEN_URL)
 
 # Check query parameters to detect an authenticated state
-query_params = st.query_params  # Accessing the property directly, no parentheses
-is_authenticated = query_params.get("auth", ["false"])[0] == "true"
+is_authenticated = st.query_params.get("auth") == "true"
 
 if 'token' not in st.session_state and not is_authenticated:
     # If no token in session state, show authorize button
@@ -30,7 +29,7 @@ if 'token' not in st.session_state and not is_authenticated:
     if result and 'token' in result:
         # Save token in session state and set query param to indicate authenticated state
         st.session_state['token'] = result['token']
-        st.set_query_params(auth="true")
+        st.query_params.auth = "true"  # Set auth flag directly in query params
         st.success("Authorization successful. You may now proceed.")
 elif 'token' in st.session_state or is_authenticated:
     # Either we have the token in session or auth is confirmed via query params
