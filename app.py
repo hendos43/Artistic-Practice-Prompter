@@ -23,7 +23,7 @@ def initiate_google_auth():
         }
     }
     flow = Flow.from_client_config(client_config, scopes=SCOPES)
-    flow.redirect_uri = st.experimental_get_query_params().get("redirect_uri", [""])[0]
+    flow.redirect_uri = "https://artistic-practice-prompter.streamlit.app/"  
     auth_url, _ = flow.authorization_url(prompt='consent')
     return auth_url, flow
 
