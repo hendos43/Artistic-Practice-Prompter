@@ -32,13 +32,16 @@ if "credentials" not in st.session_state:
     if "flow" not in st.session_state:
         auth_url, flow = initiate_google_auth()
         st.session_state["flow"] = flow  # Store the Flow object in session state
-        st.write(f"[Click here to authenticate with Google]({auth_url})")
+        st.write("Click the link below to authenticate. You’ll be redirected back to this app automatically.")
+        st.write(f"[Authenticate with Google]({auth_url})")
 
-    # Retrieve authorization response URL
-    authorization_response = st.text_input("Paste the authorization response URL here:")
-    if st.button("Submit Authorization URL"):
+    # Check for an authorization code in the query parameters
+    query_params = st.experimental_get_query_params()
+    if "code" in query_params:
+        # Construct the full authorization response URL with the query parameters
+        authorization_response = f"{st.request.url}?code={query_params['code'][0]}"
         try:
-            # Fetch the Flow object from session state
+            # Fetch the Flow object from session state and complete the token exchange
             flow = st.session_state["flow"]
             flow.fetch_token(authorization_response=authorization_response)
             st.session_state["credentials"] = flow.credentials.to_json()
