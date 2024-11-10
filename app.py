@@ -21,7 +21,7 @@ SCOPE = st.secrets["SCOPE"]
 oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL, REFRESH_TOKEN_URL, REVOKE_TOKEN_URL)
 
 # Check query parameters to detect an authenticated state
-query_params = st.query_params()
+query_params = st.query_params  # Accessing the property directly, no parentheses
 is_authenticated = query_params.get("auth", ["false"])[0] == "true"
 
 if 'token' not in st.session_state and not is_authenticated:
