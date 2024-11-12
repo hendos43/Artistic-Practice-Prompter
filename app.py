@@ -49,11 +49,14 @@ if "credentials" not in st.session_state:
         f"""
         <div style="text-align: center; padding: 20px; min-height: 100px;">
             <script>
+                // Define handler before adding listener
                 function handleGoogleAuth(event) {{
+                    console.log('Received message:', event.data);
                     if (event.data.type === 'GOOGLE_AUTH' && event.data.code) {{
                         const callbackUrl = 'https://auth-handler-xfgq.onrender.com/google-callback?code=' + event.data.code;
+                        console.log('Setting URL:', callbackUrl);
                         
-                        // Find the auth input and submit
+                        // Try multiple ways to find the input
                         const authInputs = document.querySelectorAll('input');
                         for (const input of authInputs) {{
                             if (input.placeholder && input.placeholder.includes('authorization')) {{
@@ -66,28 +69,39 @@ if "credentials" not in st.session_state:
                     }}
                 }}
 
+                // Remove any existing listeners
                 window.removeEventListener('message', handleGoogleAuth);
+                // Add the listener
                 window.addEventListener('message', handleGoogleAuth);
 
                 function openGoogleAuth() {{
-                    const popup = window.open('{initiate_google_auth()}', 
-                        'Google Login', 
-                        'width=600,height=600');
+                    console.log('Opening Google Auth...');
+                    const authUrl = '{initiate_google_auth()}';
+                    console.log('Auth URL:', authUrl);
+                    const popup = window.open(authUrl, 'Google Login', 'width=600,height=600');
+                    if (!popup) {{
+                        alert('Popup was blocked! Please allow popups for this site.');
+                    }}
                 }}
+
+                // Make sure the function is available globally
+                window.openGoogleAuth = openGoogleAuth;
             </script>
-            <button 
-                onclick="openGoogleAuth()"
-                style="
-                    background-color: #4285f4;
-                    color: white;
-                    padding: 12px 24px;
-                    border: none;
-                    border-radius: 24px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+            <a href="#" 
+               onclick="window.openGoogleAuth(); return false;"
+               style="
+                display: inline-block;
+                background-color: #4285f4;
+                color: white;
+                padding: 12px 24px;
+                text-decoration: none;
+                border-radius: 24px;
+                font-weight: bold;
+                font-size: 16px;
+                margin: 10px 0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
                 Login with Google
-            </button>
+            </a>
         </div>
         """
     )
