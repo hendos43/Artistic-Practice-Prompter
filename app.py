@@ -7,6 +7,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 import tempfile
+import secrets
 
 # Configuration for OAuth scopes
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
@@ -37,9 +38,16 @@ def initiate_google_auth():
         }
     }
     flow = Flow.from_client_config(client_config, scopes=SCOPES)
-    # Use the google-callback endpoint instead
     flow.redirect_uri = "https://auth-handler-xfgq.onrender.com/google-callback"
-    auth_url, _ = flow.authorization_url(prompt='consent')
+    
+    # Generate and store state parameter
+    state = secrets.token_urlsafe(16)
+    st.session_state["oauth_state"] = state
+    
+    auth_url, _ = flow.authorization_url(
+        prompt='consent',
+        state=state  # Include state in auth URL
+    )
     st.session_state["flow"] = flow
     return auth_url
 
@@ -58,19 +66,28 @@ if "credentials" not in st.session_state:
 
     authorization_response = st.text_input(
         "After logging in, paste the URL here:",
-        placeholder="The authorization URL will appear after you log in...",
+        placeholder="The authorization URL, after you log in...",
         label_visibility="visible"
     )
 
     if authorization_response:
         try:
             flow = st.session_state["flow"]
+            # Extract state from response URL
+            from urllib.parse import urlparse, parse_qs
+            parsed_url = urlparse(authorization_response)
+            response_state = parse_qs(parsed_url.query).get('state', [None])[0]
+            
+            # Verify state matches
+            if response_state != st.session_state.get("oauth_state"):
+                raise ValueError("State parameter doesn't match")
+                
             flow.fetch_token(authorization_response=authorization_response)
             st.session_state["credentials"] = flow.credentials.to_json()
             st.success("Successfully authenticated with Google!")
             st.rerun()
         except Exception as e:
-            st.error(f"Authentication failed: {e}")
+            st.error(f"Authentication failed: {str(e)}")
 
 # Step 3: Display daily prompt and save response if authenticated
 if "credentials" in st.session_state:
