@@ -53,9 +53,8 @@ if "credentials" not in st.session_state:
                 console.log('Setting up Google Auth...');
                 
                 function handleGoogleAuth(event) {{
-                    console.log('Message received:', event);
+                    console.log('Message received:', event.data);
                     if (event.data && event.data.type === 'GOOGLE_AUTH' && event.data.code) {{
-                        console.log('Got auth code:', event.data.code);
                         const callbackUrl = 'https://auth-handler-xfgq.onrender.com/google-callback?code=' + event.data.code;
                         console.log('Setting URL:', callbackUrl);
                         
@@ -83,24 +82,9 @@ if "credentials" not in st.session_state:
 
                 window.removeEventListener('message', handleGoogleAuth);
                 window.addEventListener('message', handleGoogleAuth);
-
-                function openGoogleAuth() {{
-                    console.log('Opening Google Auth...');
-                    const authUrl = '{auth_url}';
-                    console.log('Auth URL:', authUrl);
-                    const popup = window.open(authUrl, 'Google Login', 'width=600,height=600');
-                    if (!popup) {{
-                        console.error('Popup blocked');
-                        alert('Popup was blocked! Please allow popups for this site.');
-                    }}
-                }}
-
-                // Make sure the function is available immediately
-                window.openGoogleAuth = openGoogleAuth;
-                console.log('Auth setup complete');
             </script>
             <button 
-                onclick="openGoogleAuth()"
+                onclick="window.open('{auth_url}', 'Google Login', 'width=600,height=600')"
                 style="
                     display: inline-block;
                     background-color: #4285f4;
@@ -124,6 +108,7 @@ if "credentials" not in st.session_state:
         placeholder="The authorization response will be filled automatically...",
         label_visibility="collapsed"
     )
+
 
     if authorization_response:
         try:
