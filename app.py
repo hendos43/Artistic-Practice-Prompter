@@ -37,31 +37,75 @@ def initiate_google_auth():
         }
     }
     flow = Flow.from_client_config(client_config, scopes=SCOPES)
-    flow.redirect_uri = "https://artistic-practice-prompter.streamlit.app/"  # Replace with your actual Streamlit app URL
+    # Use the google-callback endpoint instead
+    flow.redirect_uri = "https://auth-handler-xfgq.onrender.com/google-callback"
     auth_url, _ = flow.authorization_url(prompt='consent')
-    st.session_state["flow"] = flow  # Store Flow object in session
+    st.session_state["flow"] = flow
     return auth_url
 
 # Step 2: Display Google OAuth link and handle copy-paste of authorization response
 if "credentials" not in st.session_state:
-    if "auth_url" not in st.session_state:
-        st.session_state["auth_url"] = initiate_google_auth()
+    st.html(
+        f"""
+        <div style="text-align: center; padding: 20px;">
+            <script>
+                function handleGoogleAuth(event) {{
+                    if (event.data.type === 'GOOGLE_AUTH' && event.data.code) {{
+                        const callbackUrl = 'https://auth-handler-xfgq.onrender.com/google-callback?code=' + event.data.code;
+                        
+                        // Find the auth input and submit
+                        const authInputs = document.querySelectorAll('input');
+                        for (const input of authInputs) {{
+                            if (input.placeholder && input.placeholder.includes('authorization')) {{
+                                input.value = callbackUrl;
+                                const form = input.closest('form');
+                                if (form) form.submit();
+                                break;
+                            }}
+                        }}
+                    }}
+                }}
 
-    # Display the OAuth URL and prompt the user to copy the URL after authenticating
-    st.write("Click the link below to authenticate with Google:")
-    st.write(f"[Authenticate with Google]({st.session_state['auth_url']})")
-    st.write("After authenticating, copy the URL from the address bar of the new tab and paste it below.")
+                window.removeEventListener('message', handleGoogleAuth);
+                window.addEventListener('message', handleGoogleAuth);
 
-    # Input for the user to paste the redirected URL
-    authorization_response = st.text_input("Paste the full authorization response URL here:")
+                function openGoogleAuth() {{
+                    const popup = window.open('{initiate_google_auth()}', 
+                        'Google Login', 
+                        'width=600,height=600');
+                }}
+            </script>
+            <button 
+                onclick="openGoogleAuth()"
+                style="
+                    background-color: #4285f4;
+                    color: white;
+                    padding: 12px 24px;
+                    border: none;
+                    border-radius: 24px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                Login with Google
+            </button>
+        </div>
+        """,
+        height=100
+    )
 
-    if st.button("Submit Authorization URL"):
+    authorization_response = st.text_input(
+        "Authorization Response:", 
+        placeholder="The authorization response will be filled automatically...",
+        label_visibility="collapsed"
+    )
+
+    if authorization_response:
         try:
-            # Fetch the Flow object from session state and complete the token exchange
             flow = st.session_state["flow"]
             flow.fetch_token(authorization_response=authorization_response)
             st.session_state["credentials"] = flow.credentials.to_json()
             st.success("Successfully authenticated with Google!")
+            st.rerun()
         except Exception as e:
             st.error(f"Authentication failed: {e}")
 
