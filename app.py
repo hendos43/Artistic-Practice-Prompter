@@ -46,69 +46,21 @@ def initiate_google_auth():
 # Step 2: Display Google OAuth link
 if "credentials" not in st.session_state:
     auth_url = initiate_google_auth()
-    st.html(
-        f"""
-        <div style="text-align: center; padding: 20px; min-height: 100px;">
-            <script>
-                console.log('Setting up Google Auth...');
-                
-                function handleGoogleAuth(event) {{
-                    console.log('Message received:', event.data);
-                    if (event.data && event.data.type === 'GOOGLE_AUTH' && event.data.code) {{
-                        const callbackUrl = 'https://auth-handler-xfgq.onrender.com/google-callback?code=' + event.data.code;
-                        console.log('Setting URL:', callbackUrl);
-                        
-                        // Find the auth input
-                        const inputs = Array.from(document.querySelectorAll('input'));
-                        console.log('Found inputs:', inputs.length);
-                        
-                        const authInput = inputs.find(input => 
-                            input.placeholder && input.placeholder.includes('authorization')
-                        );
-                        
-                        if (authInput) {{
-                            console.log('Found auth input');
-                            authInput.value = callbackUrl;
-                            const form = authInput.closest('form');
-                            if (form) {{
-                                console.log('Submitting form');
-                                form.submit();
-                            }}
-                        }} else {{
-                            console.error('Auth input not found');
-                        }}
-                    }}
-                }}
-
-                window.removeEventListener('message', handleGoogleAuth);
-                window.addEventListener('message', handleGoogleAuth);
-            </script>
-            <button 
-                onclick="window.open('{auth_url}', 'Google Login', 'width=600,height=600')"
-                style="
-                    display: inline-block;
-                    background-color: #4285f4;
-                    color: white;
-                    padding: 12px 24px;
-                    border: none;
-                    border-radius: 24px;
-                    font-weight: bold;
-                    font-size: 16px;
-                    margin: 10px 0;
-                    cursor: pointer;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                Login with Google
-            </button>
-        </div>
-        """
-    )
+    
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.link_button(
+            "Login with Google",
+            auth_url,
+            type="primary",
+            use_container_width=True
+        )
 
     authorization_response = st.text_input(
-        "Authorization Response:", 
-        placeholder="The authorization response will be filled automatically...",
-        label_visibility="collapsed"
+        "After logging in, paste the URL here:",
+        placeholder="The authorization URL will appear after you log in...",
+        label_visibility="visible"
     )
-
 
     if authorization_response:
         try:
