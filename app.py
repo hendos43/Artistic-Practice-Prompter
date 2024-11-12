@@ -43,7 +43,7 @@ def initiate_google_auth():
     st.session_state["flow"] = flow
     return auth_url
 
-# Step 2: Display Google OAuth link and handle copy-paste of authorization response
+# Step 2: Display Google OAuth link
 if "credentials" not in st.session_state:
     auth_url = initiate_google_auth()
     st.html(
@@ -95,24 +95,26 @@ if "credentials" not in st.session_state:
                     }}
                 }}
 
+                // Make sure the function is available immediately
                 window.openGoogleAuth = openGoogleAuth;
                 console.log('Auth setup complete');
             </script>
-            <a href="#" 
-               onclick="window.openGoogleAuth(); return false;"
-               style="
-                display: inline-block;
-                background-color: #4285f4;
-                color: white;
-                padding: 12px 24px;
-                text-decoration: none;
-                border-radius: 24px;
-                font-weight: bold;
-                font-size: 16px;
-                margin: 10px 0;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+            <button 
+                onclick="openGoogleAuth()"
+                style="
+                    display: inline-block;
+                    background-color: #4285f4;
+                    color: white;
+                    padding: 12px 24px;
+                    border: none;
+                    border-radius: 24px;
+                    font-weight: bold;
+                    font-size: 16px;
+                    margin: 10px 0;
+                    cursor: pointer;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
                 Login with Google
-            </a>
+            </button>
         </div>
         """
     )
