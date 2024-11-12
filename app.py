@@ -27,7 +27,6 @@ def get_daily_prompt():
 st.title("Daily Prompt Response")
 st.write("Authenticate with Google to respond to today’s prompt and save it to your Google Drive.")
 
-# Step 1: Google OAuth Flow
 def initiate_google_auth():
     client_config = {
         "web": {
@@ -45,13 +44,14 @@ def initiate_google_auth():
     st.session_state["oauth_state"] = state
     
     auth_url, _ = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true',
         prompt='consent',
-        state=state  # Include state in auth URL
+        state=state
     )
     st.session_state["flow"] = flow
     return auth_url
 
-# Step 2: Display Google OAuth link
 if "credentials" not in st.session_state:
     auth_url = initiate_google_auth()
     
@@ -64,22 +64,30 @@ if "credentials" not in st.session_state:
             use_container_width=True
         )
 
+    st.info("After clicking the button above and logging in, you'll be redirected to a page with a URL. Copy that URL and paste it below.")
+    
     authorization_response = st.text_input(
-        "After logging in, paste the URL here:",
-        placeholder="The authorization URL, after you log in...",
+        "Paste the authorization URL here:",
+        placeholder="https://auth-handler-xfgq.onrender.com/google-callback?code=...&state=...",
         label_visibility="visible"
     )
 
     if authorization_response:
         try:
             flow = st.session_state["flow"]
+            
             # Extract state from response URL
             from urllib.parse import urlparse, parse_qs
             parsed_url = urlparse(authorization_response)
             response_state = parse_qs(parsed_url.query).get('state', [None])[0]
             
+            # Debug output
+            st.write("Debug info:")
+            st.write(f"Expected state: {st.session_state.get('oauth_state')}")
+            st.write(f"Received state: {response_state}")
+            
             # Verify state matches
-            if response_state != st.session_state.get("oauth_state"):
+            if not response_state or response_state != st.session_state.get("oauth_state"):
                 raise ValueError("State parameter doesn't match")
                 
             flow.fetch_token(authorization_response=authorization_response)
