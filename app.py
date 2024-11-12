@@ -39,9 +39,12 @@ def initiate_google_auth():
     flow = Flow.from_client_config(client_config, scopes=SCOPES)
     flow.redirect_uri = "https://auth-handler-xfgq.onrender.com/google-callback"
     
-    # Generate and store state parameter
-    state = secrets.token_urlsafe(16)
-    st.session_state["oauth_state"] = state
+    # Only generate new state if it doesn't exist
+    if "oauth_state" not in st.session_state:
+        state = secrets.token_urlsafe(16)
+        st.session_state["oauth_state"] = state
+    else:
+        state = st.session_state["oauth_state"]
     
     auth_url, _ = flow.authorization_url(
         access_type='offline',
