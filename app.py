@@ -45,47 +45,58 @@ def initiate_google_auth():
 
 # Step 2: Display Google OAuth link and handle copy-paste of authorization response
 if "credentials" not in st.session_state:
+    auth_url = initiate_google_auth()
     st.html(
         f"""
         <div style="text-align: center; padding: 20px; min-height: 100px;">
             <script>
-                // Define handler before adding listener
+                console.log('Setting up Google Auth...');
+                
                 function handleGoogleAuth(event) {{
-                    console.log('Received message:', event.data);
-                    if (event.data.type === 'GOOGLE_AUTH' && event.data.code) {{
+                    console.log('Message received:', event);
+                    if (event.data && event.data.type === 'GOOGLE_AUTH' && event.data.code) {{
+                        console.log('Got auth code:', event.data.code);
                         const callbackUrl = 'https://auth-handler-xfgq.onrender.com/google-callback?code=' + event.data.code;
                         console.log('Setting URL:', callbackUrl);
                         
-                        // Try multiple ways to find the input
-                        const authInputs = document.querySelectorAll('input');
-                        for (const input of authInputs) {{
-                            if (input.placeholder && input.placeholder.includes('authorization')) {{
-                                input.value = callbackUrl;
-                                const form = input.closest('form');
-                                if (form) form.submit();
-                                break;
+                        // Find the auth input
+                        const inputs = Array.from(document.querySelectorAll('input'));
+                        console.log('Found inputs:', inputs.length);
+                        
+                        const authInput = inputs.find(input => 
+                            input.placeholder && input.placeholder.includes('authorization')
+                        );
+                        
+                        if (authInput) {{
+                            console.log('Found auth input');
+                            authInput.value = callbackUrl;
+                            const form = authInput.closest('form');
+                            if (form) {{
+                                console.log('Submitting form');
+                                form.submit();
                             }}
+                        }} else {{
+                            console.error('Auth input not found');
                         }}
                     }}
                 }}
 
-                // Remove any existing listeners
                 window.removeEventListener('message', handleGoogleAuth);
-                // Add the listener
                 window.addEventListener('message', handleGoogleAuth);
 
                 function openGoogleAuth() {{
                     console.log('Opening Google Auth...');
-                    const authUrl = '{initiate_google_auth()}';
+                    const authUrl = '{auth_url}';
                     console.log('Auth URL:', authUrl);
                     const popup = window.open(authUrl, 'Google Login', 'width=600,height=600');
                     if (!popup) {{
+                        console.error('Popup blocked');
                         alert('Popup was blocked! Please allow popups for this site.');
                     }}
                 }}
 
-                // Make sure the function is available globally
                 window.openGoogleAuth = openGoogleAuth;
+                console.log('Auth setup complete');
             </script>
             <a href="#" 
                onclick="window.openGoogleAuth(); return false;"
