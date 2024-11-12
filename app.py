@@ -47,7 +47,7 @@ def initiate_google_auth():
 if "credentials" not in st.session_state:
     st.html(
         f"""
-        <div style="text-align: center; padding: 20px;">
+        <div style="text-align: center; padding: 20px; min-height: 100px;">
             <script>
                 function handleGoogleAuth(event) {{
                     if (event.data.type === 'GOOGLE_AUTH' && event.data.code) {{
@@ -89,8 +89,7 @@ if "credentials" not in st.session_state:
                 Login with Google
             </button>
         </div>
-        """,
-        height=100
+        """
     )
 
     authorization_response = st.text_input(
